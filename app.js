@@ -169,6 +169,20 @@ app.post('/view', async (req, res) => { /* ... */ });
 app.post('/share', async (req, res) => { /* ... */ });
 // (puoi copiare le versioni precedenti e aggiungere try/catch come sopra)
 
+// ROUTE DI DEBUG – togli dopo
+app.get('/debug', (req, res) => {
+  res.send(`
+    <h1>Server vivo</h1>
+    <p>BASE_RPC: ${process.env.BASE_RPC ? 'OK' : 'MANCANTE'}</p>
+    <p>PRIVATE_KEY: ${process.env.PRIVATE_KEY ? 'presente (' + process.env.PRIVATE_KEY.substring(0,10) + '...)' : 'MANCANTE'}</p>
+    <p>CONTRACT_ADDRESS: ${process.env.CONTRACT_ADDRESS || 'MANCANTE'}</p>
+    <p>NEYNAR_API_KEY: ${process.env.NEYNAR_API_KEY ? 'presente' : 'MANCANTE'}</p>
+    <p>Contract object: ${contract ? 'OK' : 'NULL (errore wallet)'}</p>
+    <p>Porta: ${port}</p>
+  `);
+});
+
 app.listen(port, () => {
   console.log(`Server on port ${port} - LIVE`);
 });
+
