@@ -63,28 +63,36 @@ app.get('/frame', (req, res) => {
       <meta property="fc:frame:input:text" content="Top 5 separati da virgola (es. song1,song2)" />
       <meta property="fc:frame:button:1" content="Submit Top 5" />
       <meta property="fc:frame:button:1:action" content="post" />
-      <meta property="fc:frame:button:1:target" content="http://localhost:8080/submit" /> <!-- Cambia con ngrok/Vercel URL -->
+      <meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/submit" /> <!-- Cambia con ngrok/Vercel URL -->
       <meta property="fc:frame:button:2" content="Daily Check-in" />
       <meta property="fc:frame:button:2:action" content="post" />
-      <meta property="fc:frame:button:2:target" content="http://localhost:8080/checkin" />
+      <meta property="fc:frame:button:2:target" content="https://highfidelity.onrender.com/checkin" />
       <meta property="fc:frame:button:3" content="View Top 5" />
       <meta property="fc:frame:button:3:action" content="post" />
-      <meta property="fc:frame:button:3:target" content="http://localhost:8080/view" />
+      <meta property="fc:frame:button:3:target" content="https://highfidelity.onrender.com/view" />
       <meta property="fc:frame:button:4" content="Share Top 5" />
       <meta property="fc:frame:button:4:action" content="post" />
-      <meta property="fc:frame:button:4:target" content="http://localhost:8080/share" />
+      <meta property="fc:frame:button:4:target" content="https://highfidelity.onrender.com/share" />
     </head>
     </html>
   `);
+});
+
+// Route per la radice – reindirizza automaticamente al Frame
+app.get('/', (req, res) => {
+  res.redirect('/frame');
 });
 
 // Submit Top 5
 app.post('/submit', async (req, res) => {
   const { untrustedData } = req.body;
   const fid = untrustedData.fid;
-  const inputs = untrustedData.inputText.split('\n');
-  const category = inputs[0] || 'songs';
-  const list = inputs[1].split(',').map(item => item.trim());
+
+  // FIX: gestione sicura degli input
+  const inputTexts = untrustedData.inputText ? untrustedData.inputText.split('\n') : ['', ''];
+  const category = inputTexts[0]?.trim() || 'songs';
+  const listText = inputTexts[1]?.trim() || '';
+  const list = listText ? listText.split(',').map(i => i.trim()).filter(Boolean) : [];
 
   const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
     headers: { 'api-key': process.env.NEYNAR_API_KEY }
@@ -107,7 +115,7 @@ app.post('/submit', async (req, res) => {
       <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Successo!+Top+5+Submitted" /> <!-- Placeholder successo -->
       <meta property="fc:frame:button:1" content="Back" />
       <meta property="fc:frame:button:1:action" content="post" />
-      <meta property="fc:frame:button:1:target" content="http://localhost:8080/frame" />
+      <meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame" />
     </head>
     </html>
   `);
@@ -154,7 +162,7 @@ app.post('/view', async (req, res) => {
       <meta property="fc:frame:image" content="${imageUrl}" />
       <meta property="fc:frame:button:1" content="Back" />
       <meta property="fc:frame:button:1:action" content="post" />
-      <meta property="fc:frame:button:1:target" content="http://localhost:8080/frame" />
+      <meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame" />
     </head>
     </html>
   `);
@@ -188,7 +196,7 @@ app.post('/share', async (req, res) => {
       <head>
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Shared+Success" />
-        <meta property="fc:frame:post_url" content="http://localhost:8080/frame" /> <!-- Back -->
+        <meta property="fc:frame:post_url" content="https://highfidelity.onrender.com/frame" /> <!-- Back -->
         <meta property="fc:frame:button:1" content="Post on Farcaster" />
         <meta property="fc:frame:button:1:action" content="post" />
         <meta property="fc:frame:button:1:target" content="https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}" /> <!-- Genera cast -->
