@@ -270,4 +270,10 @@ app.post('/share', async (req, res) => {
   }
 });
 
+app.use((req, res, next) => {
+  if (req.path === '/frame') res.set('Content-Type', 'text/html');
+  next();
+});
+
 app.listen(port, () => console.log(`Server on port ${port}`));
+
