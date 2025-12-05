@@ -20,14 +20,14 @@ try {
   contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, wallet);
   console.log("Contract loaded OK");
 } catch (err) {
-  console.error("Contract load error:", err.message);
+  console.error("Contract error:", err.message);
 }
 
 // DB
 let userData = {};
 let aggregates = {};
 
-// Spotify
+// Spotify (optional)
 async function getSpotifyToken() {
   try {
     const response = await axios.post('https://accounts.spotify.com/api/token', 'grant_type=client_credentials', {
@@ -38,7 +38,6 @@ async function getSpotifyToken() {
     });
     return response.data.access_token;
   } catch (e) {
-    console.error('Spotify token error:', e.message);
     return null;
   }
 }
@@ -52,7 +51,6 @@ async function getSpotifyLink(item) {
     });
     return response.data.tracks.items[0]?.external_urls.spotify || 'No link';
   } catch (e) {
-    console.error('Spotify link error:', e.message);
     return 'No link';
   }
 }
@@ -63,11 +61,32 @@ cron.schedule('0 0 * * 0', () => {
   console.log('Aggregati resettati');
 });
 
-// Frame
+// Frame vNext (JSON embed)
 app.get('/frame', (req, res) => {
-  console.log(' /frame requested – checking if hit'); // Log for debug
-  res.set('Content-Type', 'text/html');
-  res.send('<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext"/><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Benvenuto+in+High+Fidelity"/><meta property="fc:frame:input:text" content="Categoria (es. songs)"/><meta property="fc:frame:input:text" content="Top 5 separati da virgola (es. song1,song2)"/><meta property="fc:frame:button:1" content="Submit Top 5"/><meta property="fc:frame:button:1:action" content="post"/><meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/submit"/><meta property="fc:frame:button:2" content="Daily Check-in"/><meta property="fc:frame:button:2:action" content="post"/><meta property="fc:frame:button:2:target" content="https://highfidelity.onrender.com/checkin"/><meta property="fc:frame:button:3" content="View Top 5"/><meta property="fc:frame:button:3:action" content="post"/><meta property="fc:frame:button:3:target" content="https://highfidelity.onrender.com/view"/><meta property="fc:frame:button:4" content="Share Top 5"/><meta property="fc:frame:button:4:action" content="post"/><meta property="fc:frame:button:4:target" content="https://highfidelity.onrender.com/share"/></head></html>');
+  const embedJson = {
+    version: "1",
+    imageUrl: "https://placehold.co/600x400/png?text=Benvenuto+in+High+Fidelity",
+    inputs: [
+      { type: "text", placeholder: "Categoria (es. songs)" },
+      { type: "text", placeholder: "Top 5 separati da virgola (es. song1,song2)" }
+    ],
+    buttons: [
+      { title: "Submit Top 5", action: { type: "post", url: "https://highfidelity.onrender.com/submit" } },
+      { title: "Daily Check-in", action: { type: "post", url: "https://highfidelity.onrender.com/checkin" } },
+      { title: "View Top 5", action: { type: "post", url: "https://highfidelity.onrender.com/view" } },
+      { title: "Share Top 5", action: { type: "post", url: "https://highfidelity.onrender.com/share" } }
+    ]
+  };
+  const embedString = JSON.stringify(embedJson);
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="fc:miniapp" content="${embedString}" />
+  <meta name="fc:frame" content="${embedString}" />
+</head>
+</html>
+  `);
 });
 
 // Root
@@ -79,8 +98,9 @@ app.get('/.well-known/farcaster.json', (req, res) => res.json({ isValid: true, m
 // Submit
 app.post('/submit', async (req, res) => {
   try {
-    const fid = req.body.untrustedData.fid;
-    const inputTexts = req.body.untrustedData.inputText ? req.body.untrustedData.inputText.split('\n') : ['', ''];
+    const { untrustedData } = req.body;
+    const fid = untrustedData.fid;
+    const inputTexts = untrustedData.inputText ? untrustedData.inputText.split('\n') : ['', ''];
     const category = inputTexts[0]?.trim() || 'songs';
     const listText = inputTexts[1]?.trim() || '';
     const list = listText ? listText.split(',').map(i => i.trim()).filter(Boolean) : [];
@@ -96,13 +116,158 @@ app.post('/submit', async (req, res) => {
 
     if (contract) await contract.mint(address, ethers.parseUnits('10', 18));
 
-    res.send('<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext"/><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Successo!+Top+5+Submitted"/><meta property="fc:frame:button:1" content="Back"/><meta property="fc:frame:button:1:action" content="post"/><meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame"/></head></html>');
+    const successEmbed = {
+      version: "1",
+      imageUrl: "https://placehold.co/600x400/png?text=Successo!+Top+5+Submitted",
+      buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+    };
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="fc:miniapp" content="${JSON.stringify(successEmbed)}" />
+  <meta name="fc:frame" content="${JSON.stringify(successEmbed)}" />
+</head>
+</html>
+    `);
   } catch (e) {
     console.error('Submit error:', e.message);
-    res.send('<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext"/><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Errore"/><meta property="fc:frame:button:1" content="Back"/><meta property="fc:frame:button:1:action" content="post"/><meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame"/></head></html>');
+    const errorEmbed = {
+      version: "1",
+      imageUrl: "https://placehold.co/600x400/png?text=Errore",
+      buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+    };
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="fc:miniapp" content="${JSON.stringify(errorEmbed)}" />
+  <meta name="fc:frame" content="${JSON.stringify(errorEmbed)}" />
+</head>
+</html>
+    `);
   }
 });
 
-// ... (aggiungi le altre routes allo stesso modo: checkin, view, share, con try/catch e minified HTML)
+// Check-in
+app.post('/checkin', async (req, res) => {
+  try {
+    const { untrustedData } = req.body;
+    const fid = untrustedData.fid;
+    const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, { headers: { 'api-key': process.env.NEYNAR_API_KEY } });
+    const address = userRes.data.users[0].custody_address;
+
+    const now = Date.now();
+    if (userData[fid]?.lastCheckin && now - userData[fid].lastCheckin < 86400000) {
+      const errorEmbed = {
+        version: "1",
+        imageUrl: "https://placehold.co/600x400/png?text=Già+fatto+oggi",
+        buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+      };
+      res.send(`<!DOCTYPE html><html><head><meta name="fc:miniapp" content="${JSON.stringify(errorEmbed)}" /><meta name="fc:frame" content="${JSON.stringify(errorEmbed)}" /></head></html>`);
+      return;
+    }
+
+    userData[fid] = userData[fid] || { address };
+    userData[fid].lastCheckin = now;
+
+    if (contract) await contract.mint(address, ethers.parseUnits('5', 18));
+
+    const successEmbed = {
+      version: "1",
+      imageUrl: "https://placehold.co/600x400/png?text=Check-in+OK!+5+HIFI+mintati",
+      buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+    };
+    res.send(`<!DOCTYPE html><html><head><meta name="fc:miniapp" content="${JSON.stringify(successEmbed)}" /><meta name="fc:frame" content="${JSON.stringify(successEmbed)}" /></head></html>`);
+  } catch (e) {
+    console.error('Check-in error:', e.message);
+    const errorEmbed = {
+      version: "1",
+      imageUrl: "https://placehold.co/600x400/png?text=Errore+Check-in",
+      buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+    };
+    res.send(`<!DOCTYPE html><html><head><meta name="fc:miniapp" content="${JSON.stringify(errorEmbed)}" /><meta name="fc:frame" content="${JSON.stringify(errorEmbed)}" /></head></html>`);
+  }
+});
+
+// View
+app.post('/view', async (req, res) => {
+  try {
+    const category = 'songs';
+    const top5 = Object.entries(aggregates[category] || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([item]) => item);
+
+    const links = await Promise.all(top5.map(getSpotifyLink));
+    const topWithLinks = top5.map((item, i) => `${item} - ${links[i] || 'No link'}`).join('\n');
+
+    const imageUrl = `https://placehold.co/600x400/png?text=Top+5+${topWithLinks.substring(0, 50)}...`;
+
+    const viewEmbed = {
+      version: "1",
+      imageUrl,
+      buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+    };
+    res.send(`<!DOCTYPE html><html><head><meta name="fc:miniapp" content="${JSON.stringify(viewEmbed)}" /><meta name="fc:frame" content="${JSON.stringify(viewEmbed)}" /></head></html>`);
+  } catch (e) {
+    console.error('View error:', e.message);
+    const errorEmbed = {
+      version: "1",
+      imageUrl: "https://placehold.co/600x400/png?text=Errore+View",
+      buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+    };
+    res.send(`<!DOCTYPE html><html><head><meta name="fc:miniapp" content="${JSON.stringify(errorEmbed)}" /><meta name="fc:frame" content="${JSON.stringify(errorEmbed)}" /></head></html>`);
+  }
+});
+
+// Share
+app.post('/share', async (req, res) => {
+  try {
+    const { untrustedData } = req.body;
+    const fid = untrustedData.fid;
+    const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, { headers: { 'api-key': process.env.NEYNAR_API_KEY } });
+    const address = userRes.data.users[0].custody_address;
+
+    const now = Date.now();
+    if (userData[fid]?.lastShare && now - userData[fid].lastShare < 86400000) {
+      const errorEmbed = {
+        version: "1",
+        imageUrl: "https://placehold.co/600x400/png?text=Già+condiviso+oggi",
+        buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+      };
+      res.send(`<!DOCTYPE html><html><head><meta name="fc:miniapp" content="${JSON.stringify(errorEmbed)}" /><meta name="fc:frame" content="${JSON.stringify(errorEmbed)}" /></head></html>`);
+      return;
+    }
+
+    userData[fid] = userData[fid] || { address };
+    userData[fid].lastShare = now;
+
+    if (contract) await contract.mint(address, ethers.parseUnits('10', 18));
+
+    const category = 'songs';
+    const list = userData[fid].lists[category] || ['No list'];
+    const shareText = `La mia Top 5 ${category}: ${list.join(', ')} #HighFidelity`;
+
+    const shareEmbed = {
+      version: "1",
+      imageUrl: "https://placehold.co/600x400/png?text=Shared!+10+HIFI+mintati",
+      buttons: [
+        { title: "Post on Farcaster", action: { type: "post", url: `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}` } },
+        { title: "Share on X", action: { type: "link", url: `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}` } },
+        { title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }
+      ]
+    };
+    res.send(`<!DOCTYPE html><html><head><meta name="fc:miniapp" content="${JSON.stringify(shareEmbed)}" /><meta name="fc:frame" content="${JSON.stringify(shareEmbed)}" /></head></html>`);
+  } catch (e) {
+    console.error('Share error:', e.message);
+    const errorEmbed = {
+      version: "1",
+      imageUrl: "https://placehold.co/600x400/png?text=Errore+Share",
+      buttons: [{ title: "Back", action: { type: "post", url: "https://highfidelity.onrender.com/frame" } }]
+    };
+    res.send(`<!DOCTYPE html><html><head><meta name="fc:miniapp" content="${JSON.stringify(errorEmbed)}" /><meta name="fc:frame" content="${JSON.stringify(errorEmbed)}" /></head></html>`);
+  }
+});
 
 app.listen(port, () => console.log(`Server on port ${port}`));
