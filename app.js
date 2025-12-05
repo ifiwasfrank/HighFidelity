@@ -5,8 +5,9 @@ const cors = require('cors');
 const { ethers } = require('ethers');
 const axios = require('axios');
 const cron = require('node-cron');
+
 const app = express();
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -29,39 +30,36 @@ let aggregates = {};
 
 // Frame principale
 app.get('/frame', (req, res) => {
-  console.log('Frame requested - sending HTML');
   res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Benvenuto+in+High+Fidelity" />
-  <meta property="fc:frame:input:text" content="Categoria (es. songs)" />
-  <meta property="fc:frame:input:text" content="Top 5 separati da virgola (es. song1,song2)" />
-  <meta property="fc:frame:button:1" content="Submit Top 5" />
-  <meta property="fc:frame:button:1:action" content="post" />
-  <meta property="fc:frame:button:1:target" content="https://highfidelity-production.up.railway.app/submit" />
-  <meta property="fc:frame:button:2" content="Daily Check-in" />
-  <meta property="fc:frame:button:2:action" content="post" />
-  <meta property="fc:frame:button:2:target" content="https://highfidelity-production.up.railway.app/checkin" />
-  <meta property="fc:frame:button:3" content="View Top 5" />
-  <meta property="fc:frame:button:3:action" content="post" />
-  <meta property="fc:frame:button:3:target" content="https://highfidelity-production.up.railway.app/view" />
-  <meta property="fc:frame:button:4" content="Share Top 5" />
-  <meta property="fc:frame:button:4:action" content="post" />
-  <meta property="fc:frame:button:4:target" content="https://highfidelity-production.up.railway.app/share" />
+  <meta charset="utf-8">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:image" content="https://placehold.co/1200x630?text=High+Fidelity+Top+5&font_size=80">
+  <meta property="fc:frame:image:aspect_ratio" content="1.91:1">
+  <meta property="fc:frame:input:text" content="Categoria (es. songs)">
+  <meta property="fc:frame:input:text" content="Top 5 separati da virgola">
+  <meta property="fc:frame:button:1" content="Submit Top 5">
+  <meta property="fc:frame:button:1:action" content="post">
+  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/submit">
+  <meta property="fc:frame:button:2" content="Daily Check-in">
+  <meta property="fc:frame:button:2:action" content="post">
+  <meta property="fc:frame:button:2:target" content="https://high-fidelity-six.vercel.app/checkin">
+  <meta property="fc:frame:button:3" content="View Top 5">
+  <meta property="fc:frame:button:3:action" content="post">
+  <meta property="fc:frame:button:3:target" content="https://high-fidelity-six.vercel.app/view">
+  <meta property="fc:frame:button:4" content="Share Top 5">
+  <meta property="fc:frame:button:4:action" content="post">
+  <meta property="fc:frame:button:4:target" content="https://high-fidelity-six.vercel.app/share">
 </head>
 <body></body>
 </html>
-  `);
-  console.log('HTML sent successfully');
+  `.trim());
 });
 
-// Root
 app.get('/', (req, res) => res.redirect('/frame'));
-
-// Manifest (opzionale)
 app.get('/.well-known/farcaster.json', (req, res) => res.json({ isValid: true, messages: [] }));
 
 // Submit
@@ -90,13 +88,15 @@ app.post('/submit', async (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:validate" content="true" />
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Top+5+salvata!+10+HIFI+mintati" />
-  <meta property="fc:frame:button:1" content="Torna al menu" />
-  <meta property="fc:frame:button:1:action" content="post" />
-  <meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame" />
+  <meta charset="utf-8">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:image" content="https://placehold.co/1200x630?text=Top+5+salvata!+10+HIFI+mintati">
+  <meta property="fc:frame:image:aspect_ratio" content="1.91:1">
+  <meta property="fc:frame:button:1" content="Back">
+  <meta property="fc:frame:button:1:action" content="post">
+  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
 </head>
+<body></body>
 </html>
     `.trim());
   } catch (e) {
@@ -105,25 +105,20 @@ app.post('/submit', async (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:validate" content="true" />
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/red/white?text=Errore" />
-  <meta property="fc:frame:button:1" content="Riprova" />
-  <meta property="fc:frame:button:1:action" content="post" />
-  <meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame" />
+  <meta charset="utf-8">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:image" content="https://placehold.co/1200x630/red/white?text=Errore">
+  <meta property="fc:frame:image:aspect_ratio" content="1.91:1">
+  <meta property="fc:frame:button:1" content="Back">
+  <meta property="fc:frame:button:1:action" content="post">
+  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
 </head>
+<body></body>
 </html>
     `.trim());
   }
 });
 
-// Check-in (stessa struttura, aggiungi le altre route se vuoi)
-app.post('/checkin', async (req, res) => {
-  // ... (stesso codice di prima con try/catch e validate tag)
-});
-
-// View, Share → aggiungi con lo stesso formato
+// Check-in, View, Share (stessa struttura – aggiungi se vuoi, o usa questo codice come base)
 
 app.listen(port, () => console.log(`Server running on port ${port}`));
-
-
