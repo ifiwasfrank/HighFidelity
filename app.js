@@ -11,16 +11,16 @@ const port = process.env.PORT || 8080;
 app.use(cors());
 app.use(express.json());
 
-// Provider e Contract
+// Contract setup
 let contract = null;
 try {
   const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC);
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
   const abi = ["function mint(address to, uint256 amount) public"];
   contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, wallet);
-  console.log("Contract caricato");
+  console.log("Contract loaded OK");
 } catch (err) {
-  console.error("Errore contract:", err.message);
+  console.error("Contract load error:", err.message);
 }
 
 // DB
@@ -38,7 +38,7 @@ async function getSpotifyToken() {
     });
     return response.data.access_token;
   } catch (e) {
-    console.error("Spotify token errore:", e.message);
+    console.error('Spotify token error:', e.message);
     return null;
   }
 }
@@ -52,6 +52,7 @@ async function getSpotifyLink(item) {
     });
     return response.data.tracks.items[0]?.external_urls.spotify || 'No link';
   } catch (e) {
+    console.error('Spotify link error:', e.message);
     return 'No link';
   }
 }
@@ -64,22 +65,22 @@ cron.schedule('0 0 * * 0', () => {
 
 // Frame
 app.get('/frame', (req, res) => {
+  console.log(' /frame requested – checking if hit'); // Log for debug
   res.set('Content-Type', 'text/html');
-  res.send(`<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext" /><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Benvenuto+in+High+Fidelity" /><meta property="fc:frame:input:text" content="Categoria (es. songs)" /><meta property="fc:frame:input:text" content="Top 5 separati da virgola (es. song1,song2)" /><meta property="fc:frame:button:1" content="Submit Top 5" /><meta property="fc:frame:button:1:action" content="post" /><meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/submit" /><meta property="fc:frame:button:2" content="Daily Check-in" /><meta property="fc:frame:button:2:action" content="post" /><meta property="fc:frame:button:2:target" content="https://highfidelity.onrender.com/checkin" /><meta property="fc:frame:button:3" content="View Top 5" /><meta property="fc:frame:button:3:action" content="post" /><meta property="fc:frame:button:3:target" content="https://highfidelity.onrender.com/view" /><meta property="fc:frame:button:4" content="Share Top 5" /><meta property="fc:frame:button:4:action" content="post" /><meta property="fc:frame:button:4:target" content="https://highfidelity.onrender.com/share" /></head></html>`);
+  res.send('<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext"/><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Benvenuto+in+High+Fidelity"/><meta property="fc:frame:input:text" content="Categoria (es. songs)"/><meta property="fc:frame:input:text" content="Top 5 separati da virgola (es. song1,song2)"/><meta property="fc:frame:button:1" content="Submit Top 5"/><meta property="fc:frame:button:1:action" content="post"/><meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/submit"/><meta property="fc:frame:button:2" content="Daily Check-in"/><meta property="fc:frame:button:2:action" content="post"/><meta property="fc:frame:button:2:target" content="https://highfidelity.onrender.com/checkin"/><meta property="fc:frame:button:3" content="View Top 5"/><meta property="fc:frame:button:3:action" content="post"/><meta property="fc:frame:button:3:target" content="https://highfidelity.onrender.com/view"/><meta property="fc:frame:button:4" content="Share Top 5"/><meta property="fc:frame:button:4:action" content="post"/><meta property="fc:frame:button:4:target" content="https://highfidelity.onrender.com/share"/></head></html>');
 });
 
-// Redirect radice
+// Root
 app.get('/', (req, res) => res.redirect('/frame'));
 
-// Manifest fallback
+// Manifest
 app.get('/.well-known/farcaster.json', (req, res) => res.json({ isValid: true, messages: [] }));
 
 // Submit
 app.post('/submit', async (req, res) => {
   try {
-    const { untrustedData } = req.body;
-    const fid = untrustedData.fid;
-    const inputTexts = untrustedData.inputText ? untrustedData.inputText.split('\n') : ['', ''];
+    const fid = req.body.untrustedData.fid;
+    const inputTexts = req.body.untrustedData.inputText ? req.body.untrustedData.inputText.split('\n') : ['', ''];
     const category = inputTexts[0]?.trim() || 'songs';
     const listText = inputTexts[1]?.trim() || '';
     const list = listText ? listText.split(',').map(i => i.trim()).filter(Boolean) : [];
@@ -95,13 +96,13 @@ app.post('/submit', async (req, res) => {
 
     if (contract) await contract.mint(address, ethers.parseUnits('10', 18));
 
-    res.send(`<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext" /><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Successo!+Top+5+Submitted" /><meta property="fc:frame:button:1" content="Back" /><meta property="fc:frame:button:1:action" content="post" /><meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame" /></head></html>`);
+    res.send('<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext"/><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Successo!+Top+5+Submitted"/><meta property="fc:frame:button:1" content="Back"/><meta property="fc:frame:button:1:action" content="post"/><meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame"/></head></html>');
   } catch (e) {
-    console.error('Submit errore:', e.message);
-    res.send(`<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext" /><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Errore" /></head></html>`);
+    console.error('Submit error:', e.message);
+    res.send('<!DOCTYPE html><html><head><meta property="fc:frame" content="vNext"/><meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Errore"/><meta property="fc:frame:button:1" content="Back"/><meta property="fc:frame:button:1:action" content="post"/><meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/frame"/></head></html>');
   }
 });
 
-// Aggiungi le altre routes allo stesso modo (checkin, view, share) – se vuoi il codice completo per loro, dimmi.
+// ... (aggiungi le altre routes allo stesso modo: checkin, view, share, con try/catch e minified HTML)
 
 app.listen(port, () => console.log(`Server on port ${port}`));
