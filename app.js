@@ -29,33 +29,33 @@ let aggregates = {};
 
 // Frame principale
 app.get('/frame', (req, res) => {
+  console.log('Frame requested - sending HTML');
   res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
   <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:image" content="https://placehold.co/1200x630?text=High+Fidelity+Top+5&font_size=60" />
-  <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-  <meta property="fc:frame:input:text" content="Categoria (ex: songs)" />
-  <meta property="fc:frame:input:text" content="Top 5 separati da virgola" />
+  <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Benvenuto+in+High+Fidelity" />
+  <meta property="fc:frame:input:text" content="Categoria (es. songs)" />
+  <meta property="fc:frame:input:text" content="Top 5 separati da virgola (es. song1,song2)" />
   <meta property="fc:frame:button:1" content="Submit Top 5" />
   <meta property="fc:frame:button:1:action" content="post" />
-  <meta property="fc:frame:button:1:target" content="https://highfidelity.onrender.com/submit" />
+  <meta property="fc:frame:button:1:target" content="https://highfidelity-production.up.railway.app/submit" />
   <meta property="fc:frame:button:2" content="Daily Check-in" />
   <meta property="fc:frame:button:2:action" content="post" />
-  <meta property="fc:frame:button:2:target" content="https://highfidelity.onrender.com/checkin" />
+  <meta property="fc:frame:button:2:target" content="https://highfidelity-production.up.railway.app/checkin" />
   <meta property="fc:frame:button:3" content="View Top 5" />
   <meta property="fc:frame:button:3:action" content="post" />
-  <meta property="fc:frame:button:3:target" content="https://highfidelity.onrender.com/view" />
+  <meta property="fc:frame:button:3:target" content="https://highfidelity-production.up.railway.app/view" />
   <meta property="fc:frame:button:4" content="Share Top 5" />
   <meta property="fc:frame:button:4:action" content="post" />
-  <meta property="fc:frame:button:4:target" content="https://highfidelity.onrender.com/share" />
+  <meta property="fc:frame:button:4:target" content="https://highfidelity-production.up.railway.app/share" />
 </head>
 <body></body>
 </html>
-  `.trim());
+  `);
+  console.log('HTML sent successfully');
 });
 
 // Root
@@ -125,4 +125,5 @@ app.post('/checkin', async (req, res) => {
 // View, Share → aggiungi con lo stesso formato
 
 app.listen(port, () => console.log(`Server running on port ${port}`));
+
 
