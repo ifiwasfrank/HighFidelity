@@ -29,14 +29,16 @@ let aggregates = {};
 
 // Frame principale
 app.get('/frame', (req, res) => {
+  res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8" />
   <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:validate" content="true" /> <!-- QUESTO RISOLVE IL REDIRECT -->
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Benvenuto+in+High+Fidelity" />
-  <meta property="fc:frame:input:text" content="Categoria (es. songs)" />
+  <meta property="fc:frame:image" content="https://placehold.co/1200x630?text=High+Fidelity+Top+5&font_size=60" />
+  <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+  <meta property="fc:frame:input:text" content="Categoria (ex: songs)" />
   <meta property="fc:frame:input:text" content="Top 5 separati da virgola" />
   <meta property="fc:frame:button:1" content="Submit Top 5" />
   <meta property="fc:frame:button:1:action" content="post" />
@@ -51,6 +53,7 @@ app.get('/frame', (req, res) => {
   <meta property="fc:frame:button:4:action" content="post" />
   <meta property="fc:frame:button:4:target" content="https://highfidelity.onrender.com/share" />
 </head>
+<body></body>
 </html>
   `.trim());
 });
@@ -122,3 +125,4 @@ app.post('/checkin', async (req, res) => {
 // View, Share → aggiungi con lo stesso formato
 
 app.listen(port, () => console.log(`Server running on port ${port}`));
+
