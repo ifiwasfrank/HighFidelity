@@ -11,6 +11,8 @@
     "ethers": "^6.7.0",
     "dotenv": "^16.3.1",
     "axios": "^1.6.0",
-    "node-cron": "^3.0.2"
+    "node-cron": "^3.0.2",
+    "@coinbase/onchainkit": "^0.1.0",
+    "@farcaster/miniapp-sdk": "^0.1.0"
   }
 }
