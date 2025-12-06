@@ -31,19 +31,23 @@ let aggregates = {};
 
 // Frame principale
 app.get('/frame', (req, res) => {
+  console.log('Frame requested');
   res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>High Fidelity</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>High Fidelity Frame</title>
   <meta property="og:title" content="High Fidelity – Top 5 Musicali">
-  <meta property="og:description" content="Condividi la tua classifica settimanale">
+  <meta property="og:description" content="Condividi le tue top 5 canzoni e artisti!">
   <meta property="og:image" content="https://placehold.co/1200x630/000000/ffffff/png?text=High+Fidelity&font_size=80">
+  <meta property="og:type" content="website">
   <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://placehold.co/1200x630/000000/ffffff/png?text=High+Fidelity&font_size=80">
-  <meta property="fc:frame:image:aspect_ratio" content="1.91:1">
+  <meta property="fc:frame:validate" content="true">
+  <meta property="fc:frame:interaction" content="true">
+  <meta property="fc:frame:image" content="https://placehold.co/600x400/000000/ffffff/png?text=Benvenuto+in+High+Fidelity">
   <meta property="fc:frame:input:text" content="Categoria (es. songs)">
   <meta property="fc:frame:input:text" content="Top 5 separati da virgola">
   <meta property="fc:frame:button:1" content="Submit Top 5">
@@ -59,7 +63,9 @@ app.get('/frame', (req, res) => {
   <meta property="fc:frame:button:4:action" content="post">
   <meta property="fc:frame:button:4:target" content="https://high-fidelity-six.vercel.app/share">
 </head>
-<body></body>
+<body>
+  <div style="display:none;">Frame loaded</div>
+</body>
 </html>
   `.trim());
 });
@@ -123,3 +129,4 @@ app.post('/submit', async (req, res) => {
 // Check-in, View, Share → puoi aggiungerli con lo stesso formato
 
 app.listen(port, () => console.log(`Server live on port ${port}`));
+
