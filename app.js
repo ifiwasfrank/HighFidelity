@@ -71,7 +71,7 @@ app.get('/', (req, res) => res.redirect('/frame'));
 
 app.get('/.well-known/farcaster.json', (req, res) => res.json({ isValid: true, messages: [] }));
 
-// Submit (con OG)
+// Submit (con OG per response)
 app.post('/submit', async (req, res) => {
   try {
     const { untrustedData } = req.body;
@@ -144,7 +144,7 @@ app.post('/submit', async (req, res) => {
   }
 });
 
-// Check-in (aggiungi le altre route allo stesso modo)
+// Check-in (stessa struttura)
 app.post('/checkin', async (req, res) => {
   try {
     const { untrustedData } = req.body;
@@ -238,6 +238,173 @@ app.post('/checkin', async (req, res) => {
   }
 });
 
-// Aggiungi /view e /share con lo stesso formato (se vuoi, dimmi e te li scrivo)
+// View (esempio)
+app.post('/view', async (req, res) => {
+  try {
+    const category = 'songs';
+    const top5 = Object.entries(aggregates[category] || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([item]) => item);
+
+    const links = await Promise.all(top5.map(getSpotifyLink));
+    const topWithLinks = top5.map((item, i) => `${item} - ${links[i] || 'No link'}`).join('\n');
+
+    const imageUrl = `https://placehold.co/600x400/png?text=Top+5+${topWithLinks.substring(0, 50)}...`;
+
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Top 5 High Fidelity</title>
+  <meta property="og:title" content="Top 5">
+  <meta property="og:description" content="${topWithLinks.substring(0, 100)}">
+  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:type" content="website">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:validate" content="true">
+  <meta property="fc:frame:image" content="${imageUrl}">
+  <meta property="fc:frame:button:1" content="Back">
+  <meta property="fc:frame:button:1:action" content="post">
+  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
+</head>
+<body>
+  <div style="display:none;">Top 5 loaded</div>
+</body>
+</html>
+  `.trim());
+  } catch (e) {
+    console.error("View error:", e.message);
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Errore View</title>
+  <meta property="og:title" content="Errore View">
+  <meta property="og:description" content="Riprova">
+  <meta property="og:image" content="https://placehold.co/1200x630/red/white?text=Errore">
+  <meta property="og:type" content="website">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:validate" content="true">
+  <meta property="fc:frame:image" content="https://placehold.co/600x400/red/white?text=Errore">
+  <meta property="fc:frame:button:1" content="Back">
+  <meta property="fc:frame:button:1:action" content="post">
+  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
+</head>
+<body>
+  <div style="display:none;">View error</div>
+</body>
+</html>
+  `.trim());
+  }
+});
+
+// Share
+app.post('/share', async (req, res) => {
+  try {
+    const { untrustedData } = req.body;
+    const fid = untrustedData.fid;
+    const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
+      headers: { 'api-key': process.env.NEYNAR_API_KEY }
+    });
+    const address = userRes.data.users[0].custody_address;
+
+    const now = Date.now();
+    if (userData[fid]?.lastShare && now - userData[fid].lastShare < 86400000) {
+      res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Share High Fidelity</title>
+  <meta property="og:title" content="Già condiviso oggi">
+  <meta property="og:description" content="Riprova domani">
+  <meta property="og:image" content="https://placehold.co/1200x630/png?text=Già+condiviso+oggi">
+  <meta property="og:type" content="website">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:validate" content="true">
+  <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Già+condiviso+oggi">
+  <meta property="fc:frame:button:1" content="Back">
+  <meta property="fc:frame:button:1:action" content="post">
+  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
+</head>
+<body>
+  <div style="display:none;">Already shared</div>
+</body>
+</html>
+      `.trim());
+      return;
+    }
+
+    userData[fid] = userData[fid] || { address };
+    userData[fid].lastShare = now;
+
+    if (contract) await contract.mint(address, ethers.parseUnits('10', 18));
+
+    const category = 'songs';
+    const list = userData[fid].lists[category] || ['No list'];
+    const shareText = `La mia Top 5 ${category}: ${list.join(', ')} #HighFidelity`;
+
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Share Successo</title>
+  <meta property="og:title" content="Shared!">
+  <meta property="og:description" content="10 HIFI mintati">
+  <meta property="og:image" content="https://placehold.co/1200x630/png?text=Shared!+10+HIFI+mintati">
+  <meta property="og:type" content="website">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:validate" content="true">
+  <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Shared!+10+HIFI+mintati">
+  <meta property="fc:frame:button:1" content="Post on Farcaster">
+  <meta property="fc:frame:button:1:action" content="post">
+  <meta property="fc:frame:button:1:target" content="https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}">
+  <meta property="fc:frame:button:2" content="Share on X">
+  <meta property="fc:frame:button:2:action" content="link">
+  <meta property="fc:frame:button:2:target" content="https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}">
+  <meta property="fc:frame:button:3" content="Back">
+  <meta property="fc:frame:button:3:action" content="post">
+  <meta property="fc:frame:button:3:target" content="https://high-fidelity-six.vercel.app/frame">
+</head>
+<body>
+  <div style="display:none;">Share success</div>
+</body>
+</html>
+  `.trim());
+  } catch (e) {
+    console.error("Share error:", e.message);
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Errore Share</title>
+  <meta property="og:title" content="Errore Share">
+  <meta property="og:description" content="Riprova">
+  <meta property="og:image" content="https://placehold.co/1200x630/red/white?text=Errore">
+  <meta property="og:type" content="website">
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:validate" content="true">
+  <meta property="fc:frame:image" content="https://placehold.co/600x400/red/white?text=Errore">
+  <meta property="fc:frame:button:1" content="Back">
+  <meta property="fc:frame:button:1:action" content="post">
+  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
+</head>
+<body>
+  <div style="display:none;">Share error</div>
+</body>
+</html>
+  `.trim());
+  }
+});
 
 app.listen(port, () => console.log(`Server running on port ${port}`));
