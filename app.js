@@ -47,7 +47,7 @@ app.get('/.well-known/farcaster.json', (req, res) => {
     "miniapp": {
       "version": "1",
       "name": "High Fidelity",
-      "description": "Top 5 musicali con mint $HIFI",
+      "description": "Music Top 5 with HIFI",
       "iconUrl": "https://placehold.co/512x512/png?text=HIFI",
       "splashImageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
       "homeUrl": "https://high-fidelity-six.vercel.app/frame",
@@ -230,3 +230,4 @@ app.post('/checkin', async (req, res) => {
 // View e Share (aggiungi con lo stesso formato)
 
 app.listen(port, () => console.log(`Server live on port ${port}`));
+
