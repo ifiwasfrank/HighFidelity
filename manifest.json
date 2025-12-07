@@ -7,7 +7,7 @@
   "homeUrl": "https://high-fidelity-six.vercel.app/frame",
   "hosting": {
     "vercel": {
-      "vercelAppId": "your-vercel-app-id"
+      "vercelAppId": "prj_Mdii8FP3htlFAcW2UFb33z36Bilo"
     }
   },
   "requiredPermissions": ["wallet"],
