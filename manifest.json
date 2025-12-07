@@ -1,14 +1,22 @@
 {
   "name": "High Fidelity",
   "version": "1.0.0",
-  "description": "Top 5 musicali con mint $HIFI",
+  "description": "Music Top Five with $HIFI",
   "icon": "https://placehold.co/512x512/png?text=HIFI",
   "splash": "https://placehold.co/1200x630/png?text=High+Fidelity",
   "homeUrl": "https://high-fidelity-six.vercel.app/frame",
   "hosting": {
     "vercel": {
-      "vercelAppId": "your-vercel-app-id"
+      "vercelAppId": "prj_Mdii8FP3htlFAcW2UFb33z36Bilo"
     }
   },
-  "requiredPermissions": ["wallet"]
+  "requiredPermissions": ["wallet"],
+  "accountAssociation": {
+    "header": "eyJmaWQiOjIxNDAyNSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDNjMTYyRTEzYzQzQjYwYUEwZTU0ZTFiMTlCZWRlYjVEYTFkODg0RTMifQ",
+    "payload": "eyJkb21haW4iOiJoaWdoLWZpZGVsaXR5LXNpeC52ZXJjZWwuYXBwIn0",
+    "signature": "zQif1h5EYJhw/qMespLncCPAmjkORbWVx0gtkM+yJt8eF+St4hBu+Hjb+4waBCK6YWpXnFJWPzjAaa0G9quU9hw="
+  },
+  "baseBuilder": {
+    "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"  // Il tuo wallet minter
+  }
 }
