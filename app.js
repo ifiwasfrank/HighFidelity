@@ -1,4 +1,4 @@
-console.log("High Fidelity Mini App starting...");
+console.log("High Fidelity starting...");
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // =================================
-// CONTRACT
+// CONTRACT (mint $HIFI)
 // =================================
 let contract = null;
 try {
@@ -22,18 +22,18 @@ try {
   const abi = ["function mint(address to, uint256 amount) public"];
   contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, wallet);
   console.log("Contract loaded OK");
-} catch (e) {
-  console.error("Wallet/Contract error:", e.message);
+} catch (err) {
+  console.error("Contract error:", err.message);
 }
 
 // =================================
-// DB IN MEMORIA
+// DB IN MEMORY
 // =================================
 const userData = {};
 const aggregates = {};
 
 // =================================
-// MANIFEST (per validazione Mini App)
+// MANIFEST (validazione Mini App)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
   res.json({
@@ -45,24 +45,24 @@ app.get('/.well-known/farcaster.json', (req, res) => {
     "miniapp": {
       "version": "1",
       "name": "High Fidelity",
-      "description": "Music Top 5 with HIFI",
+      "description": "Weekly music top 5 with HIFI mint",
       "iconUrl": "https://placehold.co/512x512/png?text=HIFI",
       "splashImageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
       "homeUrl": "https://high-fidelity-six.vercel.app/frame",
       "imageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
       "tags": ["music", "top5", "hifi"],
       "primaryCategory": "entertainment",
-      "subtitle": "Classifiche musicali",
-      "buttonTitle": "Apri High Fidelity"
+      "subtitle": "Music charts",
+      "buttonTitle": "Open High Fidelity"
     },
     "baseBuilder": {
-      "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6" // tuo minter
+      "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"
     }
   });
 });
 
 // =================================
-// FRAME / MINI APP (overlay)
+// FRAME / MINI APP OVERLAY
 // =================================
 app.get('/frame', (req, res) => {
   res.send(`
@@ -77,49 +77,48 @@ app.get('/frame', (req, res) => {
 <body>
   <div id="app">
     <h1>High Fidelity</h1>
-    <input type="text" id="category" placeholder="Categoria (es. songs)"><br><br>
-    <input type="text" id="list" placeholder="Top 5 separati da virgola"><br><br>
+    <input type="text" id="category" placeholder="Category (ex: songs)"><br><br>
+    <input type="text" id="list" placeholder="Top 5 comma separated"><br><br>
     <button onclick="submitTop5()">Submit Top 5</button>
     <button onclick="dailyCheckIn()">Daily Check-in</button>
     <button onclick="viewTop5()">View Top 5</button>
     <button onclick="shareTop5()">Share Top 5</button>
-    <div id="feedback"></div>
+    <div id="feedback" style="margin-top:20px;"></div>
   </div>
 
   <script>
-    // READY OBBLIGATORIO (fix splash screen)
+    // READY FIX (no more splash screen error)
     if (typeof MiniAppSDK !== 'undefined') {
-      const { sdk } = MiniAppSDK;
-      sdk.actions.ready();
+      MiniAppSDK.sdk.actions.ready();
       console.log("sdk.actions.ready() called");
     }
 
     async function submitTop5() {
       const category = document.getElementById('category').value || 'songs';
       const list = document.getElementById('list').value.split(',').map(i => i.trim()).filter(Boolean);
-      const response = await fetch('/submit', {
+      const res = await fetch('/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, list })
       });
-      const data = await response.json();
-      document.getElementById('feedback').innerText = data.message || 'Errore';
+      const data = await res.json();
+      document.getElementById('feedback').innerText = data.message || 'Error';
     }
 
     async function dailyCheckIn() {
-      const response = await fetch('/checkin', { method: 'POST' });
-      const data = await response.json();
-      document.getElementById('feedback').innerText = data.message || 'Errore';
+      const res = await fetch('/checkin', { method: 'POST' });
+      const data = await res.json();
+      document.getElementById('feedback').innerText = data.message || 'Error';
     }
 
     async function viewTop5() {
-      const response = await fetch('/view', { method: 'POST' });
-      const data = await response.json();
-      document.getElementById('feedback').innerText = data.top5 ? data.top5.join(', ') : 'Nessuna classifica';
+      const res = await fetch('/view', { method: 'POST' });
+      const data = await res.json();
+      document.getElementById('feedback').innerText = data.top5 ? data.top5.join(', ') : 'No rankings yet';
     }
 
     async function shareTop5() {
-      const shareText = 'La mia Top 5 #HighFidelity';
+      const shareText = 'My Top 5 on High Fidelity #HighFidelity';
       MiniAppSDK.sdk.actions.share(shareText);
     }
   </script>
@@ -136,8 +135,8 @@ app.get('/', (req, res) => res.redirect('/frame'));
 app.post('/submit', async (req, res) => {
   try {
     const { category, list } = req.body;
-    const fid = req.headers['x-farcaster-fid'] || req.body.untrustedData?.fid;
-    if (!fid) throw new Error("FID mancante");
+    const fid = req.headers['x-farcaster-fid']; // MiniApp SDK sends FID in header
+    if (!fid) throw new Error("Missing FID");
 
     const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
       headers: { 'api-key': process.env.NEYNAR_API_KEY }
@@ -152,10 +151,10 @@ app.post('/submit', async (req, res) => {
 
     if (contract) await contract.mint(address, ethers.parseUnits('10', 18));
 
-    res.json({ success: true, message: 'Top 5 salvata! 10 HIFI mintati' });
+    res.json({ success: true, message: 'Top 5 saved! 10 HIFI minted' });
   } catch (e) {
     console.error("Submit error:", e.message);
-    res.json({ success: false, message: 'Errore submit' });
+    res.json({ success: false, message: 'Error submitting' });
   }
 });
 
@@ -164,8 +163,8 @@ app.post('/submit', async (req, res) => {
 // =================================
 app.post('/checkin', async (req, res) => {
   try {
-    const fid = req.headers['x-farcaster-fid'] || req.body.untrustedData?.fid;
-    if (!fid) throw new Error("FID mancante");
+    const fid = req.headers['x-farcaster-fid'];
+    if (!fid) throw new Error("Missing FID");
 
     const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
       headers: { 'api-key': process.env.NEYNAR_API_KEY }
@@ -174,7 +173,7 @@ app.post('/checkin', async (req, res) => {
 
     const now = Date.now();
     if (userData[fid]?.lastCheckin && now - userData[fid].lastCheckin < 86400000) {
-      res.json({ success: false, message: 'Già fatto oggi' });
+      res.json({ success: false, message: 'Already checked in today' });
       return;
     }
 
@@ -183,10 +182,10 @@ app.post('/checkin', async (req, res) => {
 
     if (contract) await contract.mint(address, ethers.parseUnits('5', 18));
 
-    res.json({ success: true, message: 'Check-in OK! 5 HIFI mintati' });
+    res.json({ success: true, message: 'Check-in successful! 5 HIFI minted' });
   } catch (e) {
     console.error("Check-in error:", e.message);
-    res.json({ success: false, message: 'Errore check-in' });
+    res.json({ success: false, message: 'Check-in error' });
   }
 });
 
@@ -204,7 +203,7 @@ app.post('/view', async (req, res) => {
     res.json({ success: true, top5 });
   } catch (e) {
     console.error("View error:", e.message);
-    res.json({ success: false, message: 'Errore view' });
+    res.json({ success: false, message: 'View error' });
   }
 });
 
@@ -213,8 +212,8 @@ app.post('/view', async (req, res) => {
 // =================================
 app.post('/share', async (req, res) => {
   try {
-    const fid = req.headers['x-farcaster-fid'] || req.body.untrustedData?.fid;
-    if (!fid) throw new Error("FID mancante");
+    const fid = req.headers['x-farcaster-fid'];
+    if (!fid) throw new Error("Missing FID");
 
     const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
       headers: { 'api-key': process.env.NEYNAR_API_KEY }
@@ -223,7 +222,7 @@ app.post('/share', async (req, res) => {
 
     const now = Date.now();
     if (userData[fid]?.lastShare && now - userData[fid].lastShare < 86400000) {
-      res.json({ success: false, message: 'Già condiviso oggi' });
+      res.json({ success: false, message: 'Already shared today' });
       return;
     }
 
@@ -234,19 +233,13 @@ app.post('/share', async (req, res) => {
 
     const category = 'songs';
     const list = userData[fid].lists[category] || ['No list'];
-    const shareText = \`La mia Top 5 \${category}: \${list.join(', ')} #HighFidelity\`;
+    const shareText = `My Top 5 ${category}: ${list.join(', ')} #HighFidelity`;
 
-    res.json({ success: true, message: 'Condiviso! 10 HIFI mintati', shareText });
+    res.json({ success: true, message: 'Shared! 10 HIFI minted', shareText });
   } catch (e) {
     console.error("Share error:", e.message);
-    res.json({ success: false, message: 'Errore share' });
+    res.json({ success: false, message: 'Share error' });
   }
 });
 
-// Cron reset aggregati
-cron.schedule('0 0 * * 0', () => {
-  aggregates = {};
-  console.log('Aggregati resettati');
-});
-
-app.listen(port, () => console.log(\`Server live on port \${port}\`));
+app.listen(port, () => console.log(`Server live on port ${port}`));
