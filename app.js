@@ -1,4 +1,4 @@
-console.log("High Fidelity starting...");
+console.log("High Fidelity Mini App starting...");
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -22,27 +22,25 @@ try {
   const abi = ["function mint(address to, uint256 amount) public"];
   contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, wallet);
   console.log("Contract loaded OK");
-} catch (err) {
-  console.error("Contract error:", err.message);
+} catch (e) {
+  console.error("Wallet/Contract error:", e.message);
 }
 
 // =================================
 // DB IN MEMORIA
 // =================================
-let userData = {};
-let aggregates = {};
+const userData = {};
+const aggregates = {};
 
 // =================================
-// MANIFEST (con accountAssociation)
-// Sostituisci header, payload, signature con i tuoi valori
+// MANIFEST (per validazione Mini App)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
-  res.set('Content-Type', 'application/json');
   res.json({
     "accountAssociation": {
-      "header": "eyJmaWQiOjIxNDAyNSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDNjMTYyRTEzYzQzQjYwYUEwZTU0ZTFiMTlCZWRlYjVEYTFkODg0RTMifQ",     // ← Sostituisci
-      "payload": "eyJkb21haW4iOiJoaWdoLWZpZGVsaXR5LXNpeC52ZXJjZWwuYXBwIn0",   // ← Sostituisci
-      "signature": "zQif1h5EYJhw/qMespLncCPAmjkORbWVx0gtkM+yJt8eF+St4hBu+Hjb+4waBCK6YWpXnFJWPzjAaa0G9quU9hw=" // ← Sostituisci
+      "header": process.env.ASSOCIATION_HEADER || "eyJmaWQiOjIxNDAyNSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDNjMTYyRTEzYzQzQjYwYUEwZTU0ZTFiMTlCZWRlYjVEYTFkODg0RTMifQ",
+      "payload": process.env.ASSOCIATION_PAYLOAD || "eyJkb21haW4iOiJoaWdoLWZpZGVsaXR5LXNpeC52ZXJjZWwuYXBwIn0",
+      "signature": process.env.ASSOCIATION_SIGNATURE || "zQif1h5EYJhw/qMespLncCPAmjkORbWVx0gtkM+yJt8eF+St4hBu+Hjb+4waBCK6YWpXnFJWPzjAaa0G9quU9hw="
     },
     "miniapp": {
       "version": "1",
@@ -58,45 +56,74 @@ app.get('/.well-known/farcaster.json', (req, res) => {
       "buttonTitle": "Apri High Fidelity"
     },
     "baseBuilder": {
-      "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6" // tuo wallet minter
+      "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6" // tuo minter
     }
   });
 });
 
 // =================================
-// FRAME PRINCIPALE (Mini App)
+// FRAME / MINI APP (overlay)
 // =================================
 app.get('/frame', (req, res) => {
-  console.log('Frame requested');
-  res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>High Fidelity</title>
-  <meta property="og:title" content="High Fidelity">
-  <meta property="og:description" content="Top 5 musicali con $HIFI">
-  <meta property="og:image" content="https://placehold.co/1200x630/png?text=High+Fidelity">
-  <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Benvenuto+in+High+Fidelity">
-  <meta property="fc:frame:input:text" content="Categoria (es. songs)">
-  <meta property="fc:frame:input:text" content="Top 5 separati da virgola">
-  <meta property="fc:frame:button:1" content="Submit Top 5">
-  <meta property="fc:frame:button:1:action" content="post">
-  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/submit">
-  <meta property="fc:frame:button:2" content="Daily Check-in">
-  <meta property="fc:frame:button:2:action" content="post">
-  <meta property="fc:frame:button:2:target" content="https://high-fidelity-six.vercel.app/checkin">
-  <meta property="fc:frame:button:3" content="View Top 5">
-  <meta property="fc:frame:button:3:action" content="post">
-  <meta property="fc:frame:button:3:target" content="https://high-fidelity-six.vercel.app/view">
-  <meta property="fc:frame:button:4" content="Share Top 5">
-  <meta property="fc:frame:button:4:action" content="post">
-  <meta property="fc:frame:button:4:target" content="https://high-fidelity-six.vercel.app/share">
+  <script src="https://unpkg.com/@farcaster/miniapp-sdk@0.1.0/dist/miniapp-sdk.js"></script>
 </head>
-<body></body>
+<body>
+  <div id="app">
+    <h1>High Fidelity</h1>
+    <input type="text" id="category" placeholder="Categoria (es. songs)"><br><br>
+    <input type="text" id="list" placeholder="Top 5 separati da virgola"><br><br>
+    <button onclick="submitTop5()">Submit Top 5</button>
+    <button onclick="dailyCheckIn()">Daily Check-in</button>
+    <button onclick="viewTop5()">View Top 5</button>
+    <button onclick="shareTop5()">Share Top 5</button>
+    <div id="feedback"></div>
+  </div>
+
+  <script>
+    // READY OBBLIGATORIO (fix splash screen)
+    if (typeof MiniAppSDK !== 'undefined') {
+      const { sdk } = MiniAppSDK;
+      sdk.actions.ready();
+      console.log("sdk.actions.ready() called");
+    }
+
+    async function submitTop5() {
+      const category = document.getElementById('category').value || 'songs';
+      const list = document.getElementById('list').value.split(',').map(i => i.trim()).filter(Boolean);
+      const response = await fetch('/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, list })
+      });
+      const data = await response.json();
+      document.getElementById('feedback').innerText = data.message || 'Errore';
+    }
+
+    async function dailyCheckIn() {
+      const response = await fetch('/checkin', { method: 'POST' });
+      const data = await response.json();
+      document.getElementById('feedback').innerText = data.message || 'Errore';
+    }
+
+    async function viewTop5() {
+      const response = await fetch('/view', { method: 'POST' });
+      const data = await response.json();
+      document.getElementById('feedback').innerText = data.top5 ? data.top5.join(', ') : 'Nessuna classifica';
+    }
+
+    async function shareTop5() {
+      const shareText = 'La mia Top 5 #HighFidelity';
+      MiniAppSDK.sdk.actions.share(shareText);
+    }
+  </script>
+</body>
 </html>
   `.trim());
 });
@@ -108,11 +135,9 @@ app.get('/', (req, res) => res.redirect('/frame'));
 // =================================
 app.post('/submit', async (req, res) => {
   try {
-    const { untrustedData } = req.body;
-    const fid = untrustedData.fid;
-    const inputTexts = untrustedData.inputText ? untrustedData.inputText.split('\n') : ['', ''];
-    const category = inputTexts[0]?.trim() || 'songs';
-    const list = inputTexts[1]?.trim() ? inputTexts[1].split(',').map(i => i.trim()).filter(Boolean) : [];
+    const { category, list } = req.body;
+    const fid = req.headers['x-farcaster-fid'] || req.body.untrustedData?.fid;
+    if (!fid) throw new Error("FID mancante");
 
     const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
       headers: { 'api-key': process.env.NEYNAR_API_KEY }
@@ -127,44 +152,21 @@ app.post('/submit', async (req, res) => {
 
     if (contract) await contract.mint(address, ethers.parseUnits('10', 18));
 
-    res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/png?text=Top+5+salvata!+10+HIFI+mintati">
-  <meta property="fc:frame:button:1" content="Back">
-  <meta property="fc:frame:button:1:action" content="post">
-  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
-</head>
-<body></body>
-</html>
-    `.trim());
+    res.json({ success: true, message: 'Top 5 salvata! 10 HIFI mintati' });
   } catch (e) {
     console.error("Submit error:", e.message);
-    res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/red/white/png?text=Errore">
-  <meta property="fc:frame:button:1" content="Back">
-  <meta property="fc:frame:button:1:action" content="post">
-  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
-</head>
-<body></body>
-</html>
-    `.trim());
+    res.json({ success: false, message: 'Errore submit' });
   }
 });
 
-// Check-in
+// =================================
+// CHECK-IN
+// =================================
 app.post('/checkin', async (req, res) => {
   try {
-    const { untrustedData } = req.body;
-    const fid = untrustedData.fid;
+    const fid = req.headers['x-farcaster-fid'] || req.body.untrustedData?.fid;
+    if (!fid) throw new Error("FID mancante");
+
     const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
       headers: { 'api-key': process.env.NEYNAR_API_KEY }
     });
@@ -172,20 +174,7 @@ app.post('/checkin', async (req, res) => {
 
     const now = Date.now();
     if (userData[fid]?.lastCheckin && now - userData[fid].lastCheckin < 86400000) {
-      res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/orange/white/png?text=Già+fatto+oggi">
-  <meta property="fc:frame:button:1" content="Back">
-  <meta property="fc:frame:button:1:action" content="post">
-  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
-</head>
-<body></body>
-</html>
-      `.trim());
+      res.json({ success: false, message: 'Già fatto oggi' });
       return;
     }
 
@@ -194,40 +183,70 @@ app.post('/checkin', async (req, res) => {
 
     if (contract) await contract.mint(address, ethers.parseUnits('5', 18));
 
-    res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/green/white/png?text=Check-in+OK!+5+HIFI+mintati">
-  <meta property="fc:frame:button:1" content="Back">
-  <meta property="fc:frame:button:1:action" content="post">
-  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
-</head>
-<body></body>
-</html>
-    `.trim());
+    res.json({ success: true, message: 'Check-in OK! 5 HIFI mintati' });
   } catch (e) {
     console.error("Check-in error:", e.message);
-    res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://placehold.co/600x400/red/white/png?text=Errore">
-  <meta property="fc:frame:button:1" content="Back">
-  <meta property="fc:frame:button:1:action" content="post">
-  <meta property="fc:frame:button:1:target" content="https://high-fidelity-six.vercel.app/frame">
-</head>
-<body></body>
-</html>
-    `.trim());
+    res.json({ success: false, message: 'Errore check-in' });
   }
 });
 
-// View e Share (aggiungi con lo stesso formato)
+// =================================
+// VIEW
+// =================================
+app.post('/view', async (req, res) => {
+  try {
+    const category = 'songs';
+    const top5 = Object.entries(aggregates[category] || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([item]) => item);
 
-app.listen(port, () => console.log(`Server live on port ${port}`));
+    res.json({ success: true, top5 });
+  } catch (e) {
+    console.error("View error:", e.message);
+    res.json({ success: false, message: 'Errore view' });
+  }
+});
 
+// =================================
+// SHARE
+// =================================
+app.post('/share', async (req, res) => {
+  try {
+    const fid = req.headers['x-farcaster-fid'] || req.body.untrustedData?.fid;
+    if (!fid) throw new Error("FID mancante");
+
+    const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
+      headers: { 'api-key': process.env.NEYNAR_API_KEY }
+    });
+    const address = userRes.data.users[0].custody_address;
+
+    const now = Date.now();
+    if (userData[fid]?.lastShare && now - userData[fid].lastShare < 86400000) {
+      res.json({ success: false, message: 'Già condiviso oggi' });
+      return;
+    }
+
+    userData[fid] = userData[fid] || { address };
+    userData[fid].lastShare = now;
+
+    if (contract) await contract.mint(address, ethers.parseUnits('10', 18));
+
+    const category = 'songs';
+    const list = userData[fid].lists[category] || ['No list'];
+    const shareText = \`La mia Top 5 \${category}: \${list.join(', ')} #HighFidelity\`;
+
+    res.json({ success: true, message: 'Condiviso! 10 HIFI mintati', shareText });
+  } catch (e) {
+    console.error("Share error:", e.message);
+    res.json({ success: false, message: 'Errore share' });
+  }
+});
+
+// Cron reset aggregati
+cron.schedule('0 0 * * 0', () => {
+  aggregates = {};
+  console.log('Aggregati resettati');
+});
+
+app.listen(port, () => console.log(\`Server live on port \${port}\`));
