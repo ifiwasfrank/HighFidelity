@@ -1,4 +1,4 @@
-console.log("High Fidelity starting...");
+console.log("High Fidelity Mini App starting...");
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // =================================
-// CONTRACT (mint $HIFI)
+// CONTRACT
 // =================================
 let contract = null;
 try {
@@ -27,13 +27,13 @@ try {
 }
 
 // =================================
-// DB IN MEMORY
+// DB IN MEMORIA
 // =================================
 const userData = {};
 const aggregates = {};
 
 // =================================
-// MANIFEST (validazione Mini App)
+// MANIFEST (Mini App validation)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
   res.json({
@@ -87,11 +87,28 @@ app.get('/frame', (req, res) => {
   </div>
 
   <script>
-    // READY FIX (no more splash screen error)
-    if (typeof MiniAppSDK !== 'undefined') {
-      MiniAppSDK.sdk.actions.ready();
-      console.log("sdk.actions.ready() called");
-    }
+    // READY IMMEDIATO – elimina l'errore "Ready not called"
+    (function () {
+      if (typeof MiniAppSDK !== 'undefined') {
+        MiniAppSDK.sdk.actions.ready();
+        console.log("sdk.actions.ready() called");
+      }
+    })();
+
+    // UI (ricaricata dopo ready per sicurezza)
+    document.addEventListener('DOMContentLoaded', () => {
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <h1>High Fidelity</h1>
+        <input type="text" id="category" placeholder="Category (ex: songs)"><br><br>
+        <input type="text" id="list" placeholder="Top 5 comma separated"><br><br>
+        <button onclick="submitTop5()">Submit Top 5</button>
+        <button onclick="dailyCheckIn()">Daily Check-in</button>
+        <button onclick="viewTop5()">View Top 5</button>
+        <button onclick="shareTop5()">Share Top 5</button>
+        <div id="feedback"></div>
+      `;
+    });
 
     async function submitTop5() {
       const category = document.getElementById('category').value || 'songs';
@@ -119,7 +136,9 @@ app.get('/frame', (req, res) => {
 
     async function shareTop5() {
       const shareText = 'My Top 5 on High Fidelity #HighFidelity';
-      MiniAppSDK.sdk.actions.share(shareText);
+      if (MiniAppSDK && MiniAppSDK.sdk) {
+        MiniAppSDK.sdk.actions.share(shareText);
+      }
     }
   </script>
 </body>
@@ -135,7 +154,7 @@ app.get('/', (req, res) => res.redirect('/frame'));
 app.post('/submit', async (req, res) => {
   try {
     const { category, list } = req.body;
-    const fid = req.headers['x-farcaster-fid']; // MiniApp SDK sends FID in header
+    const fid = req.headers['x-farcaster-fid'];
     if (!fid) throw new Error("Missing FID");
 
     const userRes = await axios.get(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
