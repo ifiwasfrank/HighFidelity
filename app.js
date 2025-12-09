@@ -33,69 +33,53 @@ const userData = {};
 const aggregates = {};
 
 // =================================
-// MANIFEST (Mini App validation)
+// MANIFEST (usa env vars per association)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
-  res.json({
-    "accountAssociation": {
-      "header": process.env.ASSOCIATION_HEADER || "eyJmaWQiOjIxNDAyNSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDNjMTYyRTEzYzQzQjYwYUEwZTU0ZTFiMTlCZWRlYjVEYTFkODg0RTMifQ",
-      "payload": process.env.ASSOCIATION_PAYLOAD || "eyJkb21haW4iOiJoaWdoLWZpZGVsaXR5LXNpeC52ZXJjZWwuYXBwIn0",
-      "signature": process.env.ASSOCIATION_SIGNATURE || "zQif1h5EYJhw/qMespLncCPAmjkORbWVx0gtkM+yJt8eF+St4hBu+Hjb+4waBCK6YWpXnFJWPzjAaa0G9quU9hw="
-    },
-    "miniapp": {
-      "version": "1",
-      "name": "High Fidelity",
-      "description": "Weekly music top 5 with HIFI mint",
-      "iconUrl": "https://placehold.co/512x512/png?text=HIFI",
-      "splashImageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
-      "homeUrl": "https://high-fidelity-six.vercel.app/frame",
-      "imageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
-      "tags": ["music", "top5", "hifi"],
-      "primaryCategory": "entertainment",
-      "subtitle": "Music charts",
-      "buttonTitle": "Open High Fidelity"
-    },
-    "baseBuilder": {
-      "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"
-    }
-  });
+  console.log("Manifest requested");
+  try {
+    res.json({
+      "accountAssociation": {
+        "header": process.env.ASSOCIATION_HEADER || "fallback-header",
+        "payload": process.env.ASSOCIATION_PAYLOAD || "fallback-payload",
+        "signature": process.env.ASSOCIATION_SIGNATURE || "fallback-signature"
+      },
+      "miniapp": {
+        "version": "1",
+        "name": "High Fidelity",
+        "description": "Weekly music top 5 with HIFI mint",
+        "iconUrl": "https://placehold.co/512x512/png?text=HIFI",
+        "splashImageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
+        "homeUrl": "https://high-fidelity-six.vercel.app/frame",
+        "imageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
+        "tags": ["music", "top5", "hifi"],
+        "primaryCategory": "entertainment",
+        "subtitle": "Music charts",
+        "buttonTitle": "Open High Fidelity"
+      },
+      "baseBuilder": {
+        "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"
+      }
+    });
+  } catch (e) {
+    console.error("Manifest error:", e.message);
+    res.status(500).json({ error: "Manifest generation failed" });
+  }
 });
 
 // =================================
 // FRAME / MINI APP OVERLAY
 // =================================
-console.log('Frame requested');
 app.get('/frame', (req, res) => {
   console.log('Frame requested');
-  res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>High Fidelity</title>
-</head>
-<body>
-  <div id="app"></div>
   <script src="https://unpkg.com/@farcaster/miniapp-sdk@0.1.0/dist/miniapp-sdk.js"></script>
-  <script>
-    // READY IMMEDIATO (fix "Ready not called")
-    (function() {
-      if (typeof MiniAppSDK !== 'undefined') {
-        MiniAppSDK.sdk.actions.ready();
-        console.log("sdk.actions.ready() called");
-      } else {
-        setTimeout(function() {
-          if (typeof MiniAppSDK !== 'undefined') {
-            MiniAppSDK.sdk.actions.ready();
-            console.log("sdk.actions.ready() called on timeout");
-          }
-        }, 100); // Fallback 100ms
-      }
-    })();
-</script>
-<script>
 </head>
 <body>
   <div id="app">
@@ -110,16 +94,25 @@ app.get('/frame', (req, res) => {
   </div>
 
   <script>
-    // READY IMMEDIATO – elimina l'errore "Ready not called"
-    (function () {
+    // READY IMMEDIATO (fix "Ready not called")
+    (function() {
       if (typeof MiniAppSDK !== 'undefined') {
         MiniAppSDK.sdk.actions.ready();
-        console.log("sdk.actions.ready() called");
+        console.log("sdk.actions.ready() called immediately");
+      } else {
+        const interval = setInterval(() => {
+          if (typeof MiniAppSDK !== 'undefined') {
+            MiniAppSDK.sdk.actions.ready();
+            console.log("sdk.actions.ready() called on interval");
+            clearInterval(interval);
+          }
+        }, 100);
       }
     })();
 
-    // UI (ricaricata dopo ready per sicurezza)
+    // UI
     document.addEventListener('DOMContentLoaded', () => {
+      console.log("DOM loaded");
       const app = document.getElementById('app');
       app.innerHTML = `
         <h1>High Fidelity</h1>
@@ -285,4 +278,5 @@ app.post('/share', async (req, res) => {
 });
 
 app.listen(port, () => console.log(`Server live on port ${port}`));
+
 
