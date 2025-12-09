@@ -64,15 +64,38 @@ app.get('/.well-known/farcaster.json', (req, res) => {
 // =================================
 // FRAME / MINI APP OVERLAY
 // =================================
+console.log('Frame requested');
 app.get('/frame', (req, res) => {
+  console.log('Frame requested');
+  res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>High Fidelity</title>
+</head>
+<body>
+  <div id="app"></div>
   <script src="https://unpkg.com/@farcaster/miniapp-sdk@0.1.0/dist/miniapp-sdk.js"></script>
+  <script>
+    // READY IMMEDIATO (fix "Ready not called")
+    (function() {
+      if (typeof MiniAppSDK !== 'undefined') {
+        MiniAppSDK.sdk.actions.ready();
+        console.log("sdk.actions.ready() called");
+      } else {
+        setTimeout(function() {
+          if (typeof MiniAppSDK !== 'undefined') {
+            MiniAppSDK.sdk.actions.ready();
+            console.log("sdk.actions.ready() called on timeout");
+          }
+        }, 100); // Fallback 100ms
+      }
+    })();
+</script>
+<script>
 </head>
 <body>
   <div id="app">
@@ -262,3 +285,4 @@ app.post('/share', async (req, res) => {
 });
 
 app.listen(port, () => console.log(`Server live on port ${port}`));
+
