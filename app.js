@@ -29,21 +29,22 @@ try {
 // =================================
 // DB IN MEMORIA
 // =================================
-const userData = {};
-const aggregates = {};
+let userData = {};
+let aggregates = {};
 
 // =================================
-// MANIFEST (usa env vars per association)
+// MANIFEST (con try/catch e fallback per association)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
   console.log("Manifest requested");
   try {
-    res.json({
-      "accountAssociation": {
-        "header": process.env.ASSOCIATION_HEADER || "fallback-header",
-        "payload": process.env.ASSOCIATION_PAYLOAD || "fallback-payload",
-        "signature": process.env.ASSOCIATION_SIGNATURE || "fallback-signature"
-      },
+    const association = {
+      header: process.env.ASSOCIATION_HEADER || "fallback-header",
+      payload: process.env.ASSOCIATION_PAYLOAD || "fallback-payload",
+      signature: process.env.ASSOCIATION_SIGNATURE || "fallback-signature"
+    };
+    const manifest = {
+      "accountAssociation": association,
       "miniapp": {
         "version": "1",
         "name": "High Fidelity",
@@ -60,10 +61,13 @@ app.get('/.well-known/farcaster.json', (req, res) => {
       "baseBuilder": {
         "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"
       }
-    });
+    };
+    res.set('Content-Type', 'application/json');
+    res.json(manifest);
+    console.log("Manifest sent OK");
   } catch (e) {
-    console.error("Manifest error:", e.message);
-    res.status(500).json({ error: "Manifest generation failed" });
+    console.error("Manifest crash:", e.message);
+    res.status(500).json({ error: "Manifest generation failed", message: e.message });
   }
 });
 
@@ -98,13 +102,12 @@ app.get('/frame', (req, res) => {
     (function() {
       if (typeof MiniAppSDK !== 'undefined') {
         MiniAppSDK.sdk.actions.ready();
-        console.log("sdk.actions.ready() called immediately");
+        console.log("sdk.actions.ready() called");
       } else {
-        const interval = setInterval(() => {
+        setTimeout(function() {
           if (typeof MiniAppSDK !== 'undefined') {
             MiniAppSDK.sdk.actions.ready();
-            console.log("sdk.actions.ready() called on interval");
-            clearInterval(interval);
+            console.log("sdk.actions.ready() called on timeout");
           }
         }, 100);
       }
@@ -112,7 +115,6 @@ app.get('/frame', (req, res) => {
 
     // UI
     document.addEventListener('DOMContentLoaded', () => {
-      console.log("DOM loaded");
       const app = document.getElementById('app');
       app.innerHTML = `
         <h1>High Fidelity</h1>
@@ -277,6 +279,10 @@ app.post('/share', async (req, res) => {
   }
 });
 
+// Cron reset aggregati
+cron.schedule('0 0 * * 0', () => {
+  aggregates = {};
+  console.log('Aggregati resettati');
+});
+
 app.listen(port, () => console.log(`Server live on port ${port}`));
-
-
