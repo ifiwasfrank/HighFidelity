@@ -1,6 +1,6 @@
 console.log("High Fidelity Mini App starting...");
 require('dotenv').config();
-const express = require('express');
+const express = require('express';
 const cors = require('cors');
 const { ethers } = require('ethers');
 const axios = require('axios');
@@ -32,17 +32,13 @@ let aggregates = {};
 app.get('/.well-known/farcaster.json', (req, res) => {
   console.log("Manifest requested");
   try {
-    const header = process.env.ASSOCIATION_HEADER || "fallback-header";
-    const payload = process.env.ASSOCIATION_PAYLOAD || "fallback-payload";
-    const signature = process.env.ASSOCIATION_SIGNATURE || "fallback-signature";
-    console.log("Association loaded:", { header: header.substring(0, 20) + "...", payload: payload.substring(0, 20) + "...", signature: signature.substring(0, 20) + "..." });
-
+    const association = {
+      header: process.env.ASSOCIATION_HEADER || "fallback-header-no-association",
+      payload: process.env.ASSOCIATION_PAYLOAD || "fallback-payload-no-association",
+      signature: process.env.ASSOCIATION_SIGNATURE || "fallback-signature-no-association"
+    };
     const manifest = {
-      "accountAssociation": {
-        "header": header,
-        "payload": payload,
-        "signature": signature
-      },
+      "accountAssociation": association,
       "miniapp": {
         "version": "1",
         "name": "High Fidelity",
@@ -68,10 +64,9 @@ app.get('/.well-known/farcaster.json', (req, res) => {
   }
 });
 
-// Frame principale
+// Frame
 app.get('/frame', (req, res) => {
   console.log('Frame requested');
-  res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
