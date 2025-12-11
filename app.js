@@ -1,6 +1,6 @@
 console.log("High Fidelity Mini App starting...");
 require('dotenv').config();
-const express = require('express';
+const express = require('express');
 const cors = require('cors');
 const { ethers } = require('ethers');
 const axios = require('axios');
@@ -12,7 +12,9 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Contract
+// =================================
+// CONTRACT
+// =================================
 let contract = null;
 try {
   const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC);
@@ -24,18 +26,22 @@ try {
   console.error("Contract error:", err.message);
 }
 
-// DB
+// =================================
+// DB IN MEMORIA
+// =================================
 let userData = {};
 let aggregates = {};
 
-// Manifest (con fallback robusto)
+// =================================
+// MANIFEST (con fallback per association – evita 500)
+// =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
   console.log("Manifest requested");
   try {
     const association = {
-      header: process.env.ASSOCIATION_HEADER || "fallback-header-no-association",
-      payload: process.env.ASSOCIATION_PAYLOAD || "fallback-payload-no-association",
-      signature: process.env.ASSOCIATION_SIGNATURE || "fallback-signature-no-association"
+      header: process.env.ASSOCIATION_HEADER || "fallback-header",
+      payload: process.env.ASSOCIATION_PAYLOAD || "fallback-payload",
+      signature: process.env.ASSOCIATION_SIGNATURE || "fallback-signature"
     };
     const manifest = {
       "accountAssociation": association,
@@ -64,7 +70,9 @@ app.get('/.well-known/farcaster.json', (req, res) => {
   }
 });
 
-// Frame
+// =================================
+// FRAME / MINI APP OVERLAY (fix Ready not called)
+// =================================
 app.get('/frame', (req, res) => {
   console.log('Frame requested');
   res.send(`
@@ -89,22 +97,23 @@ app.get('/frame', (req, res) => {
   </div>
 
   <script>
-    // READY IMMEDIATO
+    // READY IMMEDIATO (fix "Ready not called")
     (function() {
       if (typeof MiniAppSDK !== 'undefined') {
         MiniAppSDK.sdk.actions.ready();
-        console.log("sdk.actions.ready() called");
+        console.log("sdk.actions.ready() called immediately");
       } else {
-        setTimeout(function() {
+        const interval = setInterval(() => {
           if (typeof MiniAppSDK !== 'undefined') {
             MiniAppSDK.sdk.actions.ready();
-            console.log("sdk.actions.ready() called on timeout");
+            console.log("sdk.actions.ready() called on interval");
+            clearInterval(interval);
           }
         }, 100);
       }
     })();
 
-    // UI
+    // UI (ricaricata dopo ready)
     document.addEventListener('DOMContentLoaded', () => {
       const app = document.getElementById('app');
       app.innerHTML = `
@@ -157,7 +166,9 @@ app.get('/frame', (req, res) => {
 
 app.get('/', (req, res) => res.redirect('/frame'));
 
-// Submit
+// =================================
+// SUBMIT
+// =================================
 app.post('/submit', async (req, res) => {
   try {
     const { category, list } = req.body;
@@ -184,7 +195,9 @@ app.post('/submit', async (req, res) => {
   }
 });
 
-// Check-in
+// =================================
+// CHECK-IN
+// =================================
 app.post('/checkin', async (req, res) => {
   try {
     const fid = req.headers['x-farcaster-fid'];
@@ -213,7 +226,9 @@ app.post('/checkin', async (req, res) => {
   }
 });
 
-// View
+// =================================
+// VIEW
+// =================================
 app.post('/view', async (req, res) => {
   try {
     const category = 'songs';
@@ -229,7 +244,9 @@ app.post('/view', async (req, res) => {
   }
 });
 
-// Share
+// =================================
+// SHARE
+// =================================
 app.post('/share', async (req, res) => {
   try {
     const fid = req.headers['x-farcaster-fid'];
