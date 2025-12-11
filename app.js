@@ -12,9 +12,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// =================================
-// CONTRACT
-// =================================
+// Contract
 let contract = null;
 try {
   const provider = new ethers.JsonRpcProvider(process.env.BASE_RPC);
@@ -26,25 +24,25 @@ try {
   console.error("Contract error:", err.message);
 }
 
-// =================================
-// DB IN MEMORIA
-// =================================
+// DB
 let userData = {};
 let aggregates = {};
 
-// =================================
-// MANIFEST (con try/catch e fallback per association)
-// =================================
+// Manifest (con fallback robusto)
 app.get('/.well-known/farcaster.json', (req, res) => {
   console.log("Manifest requested");
   try {
-    const association = {
-      header: process.env.ASSOCIATION_HEADER || "fallback-header",
-      payload: process.env.ASSOCIATION_PAYLOAD || "fallback-payload",
-      signature: process.env.ASSOCIATION_SIGNATURE || "fallback-signature"
-    };
+    const header = process.env.ASSOCIATION_HEADER || "fallback-header";
+    const payload = process.env.ASSOCIATION_PAYLOAD || "fallback-payload";
+    const signature = process.env.ASSOCIATION_SIGNATURE || "fallback-signature";
+    console.log("Association loaded:", { header: header.substring(0, 20) + "...", payload: payload.substring(0, 20) + "...", signature: signature.substring(0, 20) + "..." });
+
     const manifest = {
-      "accountAssociation": association,
+      "accountAssociation": {
+        "header": header,
+        "payload": payload,
+        "signature": signature
+      },
       "miniapp": {
         "version": "1",
         "name": "High Fidelity",
@@ -62,7 +60,6 @@ app.get('/.well-known/farcaster.json', (req, res) => {
         "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"
       }
     };
-    res.set('Content-Type', 'application/json');
     res.json(manifest);
     console.log("Manifest sent OK");
   } catch (e) {
@@ -71,11 +68,10 @@ app.get('/.well-known/farcaster.json', (req, res) => {
   }
 });
 
-// =================================
-// FRAME / MINI APP OVERLAY
-// =================================
+// Frame principale
 app.get('/frame', (req, res) => {
   console.log('Frame requested');
+  res.set('Content-Type', 'text/html');
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
@@ -98,7 +94,7 @@ app.get('/frame', (req, res) => {
   </div>
 
   <script>
-    // READY IMMEDIATO (fix "Ready not called")
+    // READY IMMEDIATO
     (function() {
       if (typeof MiniAppSDK !== 'undefined') {
         MiniAppSDK.sdk.actions.ready();
@@ -166,9 +162,7 @@ app.get('/frame', (req, res) => {
 
 app.get('/', (req, res) => res.redirect('/frame'));
 
-// =================================
-// SUBMIT
-// =================================
+// Submit
 app.post('/submit', async (req, res) => {
   try {
     const { category, list } = req.body;
@@ -195,9 +189,7 @@ app.post('/submit', async (req, res) => {
   }
 });
 
-// =================================
-// CHECK-IN
-// =================================
+// Check-in
 app.post('/checkin', async (req, res) => {
   try {
     const fid = req.headers['x-farcaster-fid'];
@@ -226,9 +218,7 @@ app.post('/checkin', async (req, res) => {
   }
 });
 
-// =================================
-// VIEW
-// =================================
+// View
 app.post('/view', async (req, res) => {
   try {
     const category = 'songs';
@@ -244,9 +234,7 @@ app.post('/view', async (req, res) => {
   }
 });
 
-// =================================
-// SHARE
-// =================================
+// Share
 app.post('/share', async (req, res) => {
   try {
     const fid = req.headers['x-farcaster-fid'];
