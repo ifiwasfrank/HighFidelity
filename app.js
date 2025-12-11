@@ -33,7 +33,7 @@ let userData = {};
 let aggregates = {};
 
 // =================================
-// MANIFEST (con fallback per association – evita 500)
+// MANIFEST (usa env vars per association – fallback per test)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
   console.log("Manifest requested");
@@ -71,7 +71,7 @@ app.get('/.well-known/farcaster.json', (req, res) => {
 });
 
 // =================================
-// FRAME / MINI APP OVERLAY (fix Ready not called)
+// FRAME / MINI APP OVERLAY
 // =================================
 app.get('/frame', (req, res) => {
   console.log('Frame requested');
@@ -101,19 +101,18 @@ app.get('/frame', (req, res) => {
     (function() {
       if (typeof MiniAppSDK !== 'undefined') {
         MiniAppSDK.sdk.actions.ready();
-        console.log("sdk.actions.ready() called immediately");
+        console.log("sdk.actions.ready() called");
       } else {
-        const interval = setInterval(() => {
+        setTimeout(function() {
           if (typeof MiniAppSDK !== 'undefined') {
             MiniAppSDK.sdk.actions.ready();
-            console.log("sdk.actions.ready() called on interval");
-            clearInterval(interval);
+            console.log("sdk.actions.ready() called on timeout");
           }
         }, 100);
       }
     })();
 
-    // UI (ricaricata dopo ready)
+    // UI
     document.addEventListener('DOMContentLoaded', () => {
       const app = document.getElementById('app');
       app.innerHTML = `
