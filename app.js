@@ -33,7 +33,7 @@ let userData = {};
 let aggregates = {};
 
 // =================================
-// MANIFEST (senza association – funziona per test)
+// MANIFEST (senza association – Warpcast lo accetta per test)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
   res.json({
@@ -54,12 +54,13 @@ app.get('/.well-known/farcaster.json', (req, res) => {
 });
 
 // =================================
-// FRAME / MINI APP
+// FRAME / MINI APP OVERLAY
 // =================================
 app.get('/frame', (req, res) => {
+  console.log('Frame requested');
   res.send(`
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -79,17 +80,25 @@ app.get('/frame', (req, res) => {
   </div>
 
   <script>
-    // READY IMMEDIATO
+    // READY IMMEDIATO (fix "Ready not called")
     (function() {
       if (typeof MiniAppSDK !== 'undefined') {
         MiniAppSDK.sdk.actions.ready();
-        console.log("ready called");
+        console.log("sdk.actions.ready() called");
+      } else {
+        setTimeout(function() {
+          if (typeof MiniAppSDK !== 'undefined') {
+            MiniAppSDK.sdk.actions.ready();
+            console.log("sdk.actions.ready() called on timeout");
+          }
+        }, 100);
       }
     })();
 
     // UI
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('app').innerHTML = `
+      const app = document.getElementById('app');
+      app.innerHTML = `
         <h1>High Fidelity</h1>
         <input type="text" id="category" placeholder="Category (ex: songs)"><br><br>
         <input type="text" id="list" placeholder="Top 5 comma separated"><br><br>
@@ -127,7 +136,9 @@ app.get('/frame', (req, res) => {
 
     async function shareTop5() {
       const shareText = 'My Top 5 on High Fidelity #HighFidelity';
-      MiniAppSDK.sdk.actions.share(shareText);
+      if (MiniAppSDK && MiniAppSDK.sdk) {
+        MiniAppSDK.sdk.actions.share(shareText);
+      }
     }
   </script>
 </body>
@@ -137,7 +148,9 @@ app.get('/frame', (req, res) => {
 
 app.get('/', (req, res) => res.redirect('/frame'));
 
-// Submit
+// =================================
+// SUBMIT
+// =================================
 app.post('/submit', async (req, res) => {
   try {
     const { category, list } = req.body;
@@ -164,7 +177,9 @@ app.post('/submit', async (req, res) => {
   }
 });
 
-// Check-in
+// =================================
+// CHECK-IN
+// =================================
 app.post('/checkin', async (req, res) => {
   try {
     const fid = req.headers['x-farcaster-fid'];
@@ -193,7 +208,9 @@ app.post('/checkin', async (req, res) => {
   }
 });
 
-// View
+// =================================
+// VIEW
+// =================================
 app.post('/view', async (req, res) => {
   try {
     const category = 'songs';
@@ -209,7 +226,9 @@ app.post('/view', async (req, res) => {
   }
 });
 
-// Share
+// =================================
+// SHARE
+// =================================
 app.post('/share', async (req, res) => {
   try {
     const fid = req.headers['x-farcaster-fid'];
