@@ -27,23 +27,16 @@ try {
 }
 
 // =================================
-// DB IN MEMORIA
+// DB
 // =================================
 let userData = {};
 let aggregates = {};
 
 // =================================
-// MANIFEST (con fallback per evitare 500)
+// MANIFEST (senza association – funziona per test)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
-  console.log("Manifest requested");
-  res.set('Content-Type', 'application/json');
-  const manifest = {
-    "accountAssociation": {
-      "header": process.env.ASSOCIATION_HEADER || "fallback-header",
-      "payload": process.env.ASSOCIATION_PAYLOAD || "fallback-payload",
-      "signature": process.env.ASSOCIATION_SIGNATURE || "fallback-signature"
-    },
+  res.json({
     "miniapp": {
       "version": "1",
       "name": "High Fidelity",
@@ -56,23 +49,17 @@ app.get('/.well-known/farcaster.json', (req, res) => {
       "primaryCategory": "entertainment",
       "subtitle": "Music charts",
       "buttonTitle": "Open High Fidelity"
-    },
-    "baseBuilder": {
-      "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"
     }
-  };
-  res.json(manifest);
-  console.log("Manifest sent OK");
+  });
 });
 
 // =================================
-// FRAME / MINI APP OVERLAY
+// FRAME / MINI APP
 // =================================
 app.get('/frame', (req, res) => {
-  console.log('Frame requested');
   res.send(`
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -92,25 +79,17 @@ app.get('/frame', (req, res) => {
   </div>
 
   <script>
-    // READY IMMEDIATO (fix "Ready not called")
+    // READY IMMEDIATO
     (function() {
       if (typeof MiniAppSDK !== 'undefined') {
         MiniAppSDK.sdk.actions.ready();
-        console.log("sdk.actions.ready() called");
-      } else {
-        setTimeout(function() {
-          if (typeof MiniAppSDK !== 'undefined') {
-            MiniAppSDK.sdk.actions.ready();
-            console.log("sdk.actions.ready() called on timeout");
-          }
-        }, 100);
+        console.log("ready called");
       }
     })();
 
     // UI
     document.addEventListener('DOMContentLoaded', () => {
-      const app = document.getElementById('app');
-      app.innerHTML = `
+      document.getElementById('app').innerHTML = `
         <h1>High Fidelity</h1>
         <input type="text" id="category" placeholder="Category (ex: songs)"><br><br>
         <input type="text" id="list" placeholder="Top 5 comma separated"><br><br>
@@ -148,9 +127,7 @@ app.get('/frame', (req, res) => {
 
     async function shareTop5() {
       const shareText = 'My Top 5 on High Fidelity #HighFidelity';
-      if (MiniAppSDK && MiniAppSDK.sdk) {
-        MiniAppSDK.sdk.actions.share(shareText);
-      }
+      MiniAppSDK.sdk.actions.share(shareText);
     }
   </script>
 </body>
@@ -160,9 +137,7 @@ app.get('/frame', (req, res) => {
 
 app.get('/', (req, res) => res.redirect('/frame'));
 
-// =================================
-// SUBMIT
-// =================================
+// Submit
 app.post('/submit', async (req, res) => {
   try {
     const { category, list } = req.body;
@@ -189,9 +164,7 @@ app.post('/submit', async (req, res) => {
   }
 });
 
-// =================================
-// CHECK-IN
-// =================================
+// Check-in
 app.post('/checkin', async (req, res) => {
   try {
     const fid = req.headers['x-farcaster-fid'];
@@ -220,9 +193,7 @@ app.post('/checkin', async (req, res) => {
   }
 });
 
-// =================================
-// VIEW
-// =================================
+// View
 app.post('/view', async (req, res) => {
   try {
     const category = 'songs';
@@ -238,9 +209,7 @@ app.post('/view', async (req, res) => {
   }
 });
 
-// =================================
-// SHARE
-// =================================
+// Share
 app.post('/share', async (req, res) => {
   try {
     const fid = req.headers['x-farcaster-fid'];
@@ -273,7 +242,7 @@ app.post('/share', async (req, res) => {
   }
 });
 
-// Cron reset aggregati
+// Cron
 cron.schedule('0 0 * * 0', () => {
   aggregates = {};
   console.log('Aggregati resettati');
