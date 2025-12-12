@@ -33,41 +33,36 @@ let userData = {};
 let aggregates = {};
 
 // =================================
-// MANIFEST (usa env vars per association – fallback per test)
+// MANIFEST (con fallback per evitare 500)
 // =================================
 app.get('/.well-known/farcaster.json', (req, res) => {
   console.log("Manifest requested");
-  try {
-    const association = {
-      header: process.env.ASSOCIATION_HEADER || "fallback-header",
-      payload: process.env.ASSOCIATION_PAYLOAD || "fallback-payload",
-      signature: process.env.ASSOCIATION_SIGNATURE || "fallback-signature"
-    };
-    const manifest = {
-      "accountAssociation": association,
-      "miniapp": {
-        "version": "1",
-        "name": "High Fidelity",
-        "description": "Weekly music top 5 with HIFI mint",
-        "iconUrl": "https://placehold.co/512x512/png?text=HIFI",
-        "splashImageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
-        "homeUrl": "https://high-fidelity-six.vercel.app/frame",
-        "imageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
-        "tags": ["music", "top5", "hifi"],
-        "primaryCategory": "entertainment",
-        "subtitle": "Music charts",
-        "buttonTitle": "Open High Fidelity"
-      },
-      "baseBuilder": {
-        "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"
-      }
-    };
-    res.json(manifest);
-    console.log("Manifest sent OK");
-  } catch (e) {
-    console.error("Manifest crash:", e.message);
-    res.status(500).json({ error: "Manifest generation failed", message: e.message });
-  }
+  res.set('Content-Type', 'application/json');
+  const manifest = {
+    "accountAssociation": {
+      "header": process.env.ASSOCIATION_HEADER || "fallback-header",
+      "payload": process.env.ASSOCIATION_PAYLOAD || "fallback-payload",
+      "signature": process.env.ASSOCIATION_SIGNATURE || "fallback-signature"
+    },
+    "miniapp": {
+      "version": "1",
+      "name": "High Fidelity",
+      "description": "Weekly music top 5 with HIFI mint",
+      "iconUrl": "https://placehold.co/512x512/png?text=HIFI",
+      "splashImageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
+      "homeUrl": "https://high-fidelity-six.vercel.app/frame",
+      "imageUrl": "https://placehold.co/1200x630/png?text=High+Fidelity",
+      "tags": ["music", "top5", "hifi"],
+      "primaryCategory": "entertainment",
+      "subtitle": "Music charts",
+      "buttonTitle": "Open High Fidelity"
+    },
+    "baseBuilder": {
+      "ownerAddress": "0x3f64c8bd049adeba075b4108c590294d186ecec6"
+    }
+  };
+  res.json(manifest);
+  console.log("Manifest sent OK");
 });
 
 // =================================
